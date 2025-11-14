@@ -15,6 +15,7 @@ func (i *inventoryRepository) ListInventories(ctx context.Context, pagination *h
 		SELECT
 			inventory_code, created_at
 		FROM inventories
+		ORDER BY created_at
 	`
 
 	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM (%s)`, query)
@@ -30,7 +31,7 @@ func (i *inventoryRepository) ListInventories(ctx context.Context, pagination *h
 	query += fmt.Sprintf(` OFFSET $1 LIMIT $2`)
 
 	inventoryList := []*constant.Inventories{}
-	err = i.sqlx.Select(&inventoryList, query, args...)
+	err = i.sqlx.SelectContext(ctx, &inventoryList, query, args...)
 	if err != nil {
 		log.Printf("%+v", errors.WithStack(err))
 		return nil, err
@@ -47,7 +48,7 @@ func (i *inventoryRepository) AddInventory(ctx context.Context, inventoryCode st
 		VALUES ($1)
 	`
 	args := []interface{}{inventoryCode}
-	_, err := i.sqlx.Exec(query, args...)
+	_, err := i.sqlx.ExecContext(ctx, query, args...)
 	if err != nil {
 		log.Printf("%+v", errors.WithStack(err))
 		return err
@@ -64,7 +65,7 @@ func (i *inventoryRepository) DeleteInventory(ctx context.Context, inventoryCode
 	`
 
 	agrs := []interface{}{inventoryCode}
-	_, err := i.sqlx.Exec(query, agrs...)
+	_, err := i.sqlx.ExecContext(ctx, query, agrs...)
 	if err != nil {
 		log.Printf("%+v", errors.WithStack(err))
 		return err

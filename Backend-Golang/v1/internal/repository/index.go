@@ -18,7 +18,7 @@ type InventoryRepository interface {
 	DeleteInventory(ctx context.Context, inventory_code string) error
 }
 
-func NewOrderRepository(sqlx *sqlx.DB) InventoryRepository {
+func NewInventoryRepository(sqlx *sqlx.DB) InventoryRepository {
 	return &inventoryRepository{
 		sqlx: sqlx,
 	}
