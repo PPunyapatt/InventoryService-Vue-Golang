@@ -40,8 +40,7 @@ func Run() error {
 		return err
 	}
 	defer db.Sqlx.Close()
-
-	repository := repository.NewOrderRepository(db.Sqlx)
+	repository := repository.NewInventoryRepository(db.Sqlx)
 
 	service := service.NewInventoryService(repository)
 
