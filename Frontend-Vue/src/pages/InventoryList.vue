@@ -179,12 +179,16 @@ export default {
       state.loading = true
       InventoryService.getInventories(state.pagination.page, state.pagination.limit)
         .then(response => {
+          console.log("response: ", response);
+          
           state.pagination.total = response.data._pagination.total_count
           state.inventories = response.data.data;
           state.pagination.pageTotal =  Math.ceil(state.pagination.total / state.pagination.limit);
         })
         .catch(e => {
           console.log(e);
+          state.color = 'red'
+          state.message = e.response.data.error_message
         });
       state.loading = false
     }
@@ -208,7 +212,7 @@ export default {
 
       try {
           const response = await InventoryService.deleteInventory(data)
-          state.message = "Delete Success"
+          state.message = response.data.message
           state.color = 'success'
           state.pagination.total--
           state.pagination.pageTotal =  Math.ceil(state.pagination.total / state.pagination.limit);
@@ -242,13 +246,13 @@ export default {
 
       try {
           const response = await InventoryService.addInventory(data)
-          state.message = "Add inventory code success"
+          state.message = response.data.message
           state.color = 'success'
           state.pagination.total++
           state.pagination.pageTotal =  Math.ceil(state.pagination.total / state.pagination.limit);
       } catch (e) {
           state.color = 'red'
-          state.message = e.response.data.error_message
+          state.message = e.response.data.message
       } finally {
         state.showSnackbarAlert = true
         state.text = ""
