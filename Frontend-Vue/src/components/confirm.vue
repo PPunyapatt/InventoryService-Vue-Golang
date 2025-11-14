@@ -5,25 +5,29 @@
       max-width="400"
       persistent
     >
-      <template v-slot:activator="{ props: activatorProps }">
-        <v-btn v-bind="activatorProps">
-          Open Dialog
-        </v-btn>
-      </template>
-
       <v-card
         prepend-icon="mdi-map-marker"
-        text="Let Google help apps determine location. This means sending anonymous location data to Google, even when no apps are running."
+        :text="text"
       >
         <template v-slot:actions>
           <v-spacer></v-spacer>
-
-          <v-btn @click="dialog = false">
-            Disagree
+          
+          <v-btn 
+            @click="handleConfirm('confirm')" 
+            class=" ms-4 text-white"
+            color="blue-darken-4"
+            variant="flat"
+          >
+            ตกลง
           </v-btn>
 
-          <v-btn @click="dialog = false">
-            Agree
+          <v-btn 
+            @click="handleConfirm('cancel')"
+            color="red" 
+            class=" text-white"
+            variant="flat"
+          >
+            ยกเลิก
           </v-btn>
         </template>
       </v-card>
@@ -32,15 +36,31 @@
 </template>
 
 <script>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 export default {
+  emits: ['confirm', 'cancel'],
   props: {
     open: { type: Boolean, required: true },
     text: { type: String, required: true }
   },
-  setup(props) {
-    const dialog = ref(false)
-    return { dialog }
+  setup(props, { emit }) {
+    const dialog = ref(props.open)
+    const text = ref(props.text)
+    // dialog.value = props.open
+    watch(() => props.open, (val) => {
+        dialog.value = val
+    })
+
+    watch(() => props.text, (val) => {
+        text.value = val
+    })
+    const handleConfirm = (val) => {
+        dialog.value = false
+        emit('confirm', val)
+    }
+
+    
+    return { dialog, handleConfirm }
   }
 }
 </script>
