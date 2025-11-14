@@ -6,11 +6,11 @@ class InventoryService {
     }
 
     addInventory(data) {
-        return http.post("/tutorials", data);
+        return http.post("/inventory",data);
     }
 
-    deleteInventory(inventory_code) {
-        return http.delete(`inventory/${inventory_code}`)
+    deleteInventory(data) {
+        return http.delete(`/inventory`, { data: data })
     }
 }
 
