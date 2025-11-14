@@ -12,6 +12,10 @@ type MockInventoryRepo struct {
 	mock.Mock
 }
 
+func NewPromotionServiceMock() *MockInventoryRepo {
+	return &MockInventoryRepo{}
+}
+
 func (m *MockInventoryRepo) ListInventories(ctx context.Context, p *helper.Pagination) ([]*constant.Inventories, error) {
 	args := m.Called(ctx, p)
 	return args.Get(0).([]*constant.Inventories), args.Error(1)
