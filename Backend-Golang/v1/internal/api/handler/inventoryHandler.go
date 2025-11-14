@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -18,7 +17,7 @@ func (c *ApiHandler) ListInventories(ctx *fiber.Ctx) error {
 
 	data, err := c.InventoryService.ListInventories(context_, pagination)
 	if err != nil {
-		return helper.RespondHttpError(ctx, helper.NewHttpError(http.StatusBadRequest, err))
+		return helper.RespondHttpError(ctx, err)
 	}
 
 	return ctx.Status(http.StatusOK).JSON(constant.ListResponse{
@@ -35,13 +34,13 @@ func (c *ApiHandler) AddInventory(ctx *fiber.Ctx) error {
 
 	request, err := helper.ParseAndValidateRequest(ctx, &constant.Inventories{})
 	if err != nil {
-		return helper.RespondHttpError(ctx, helper.NewHttpError(http.StatusBadRequest, err))
+		msg := err.Error()
+		return helper.RespondHttpError(ctx, helper.NewHttpError(http.StatusBadRequest, &msg))
 	}
-	fmt.Println("request: ", request)
 
 	err = c.InventoryService.AddInventory(context_, request.InventoryCode)
 	if err != nil {
-		return helper.RespondHttpError(ctx, helper.NewHttpError(http.StatusInternalServerError, err))
+		return helper.RespondHttpError(ctx, err)
 	}
 
 	return ctx.Status(http.StatusOK).JSON(constant.StatusResponse{
@@ -56,12 +55,13 @@ func (c *ApiHandler) DeleteInventory(ctx *fiber.Ctx) error {
 
 	request, err := helper.ParseAndValidateRequest(ctx, &constant.Inventories{})
 	if err != nil {
-		return helper.RespondHttpError(ctx, helper.NewHttpError(http.StatusBadRequest, err))
+		msg := err.Error()
+		return helper.RespondHttpError(ctx, helper.NewHttpError(http.StatusBadRequest, &msg))
 	}
 
 	err = c.InventoryService.DeleteInventory(context_, request.InventoryCode)
 	if err != nil {
-		return helper.RespondHttpError(ctx, helper.NewHttpError(http.StatusInternalServerError, err))
+		return helper.RespondHttpError(ctx, err)
 	}
 
 	return ctx.Status(http.StatusOK).JSON(constant.StatusResponse{
