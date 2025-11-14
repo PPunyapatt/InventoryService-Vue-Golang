@@ -12,7 +12,7 @@ type MockInventoryRepo struct {
 	mock.Mock
 }
 
-func NewPromotionServiceMock() *MockInventoryRepo {
+func NewInventoryRepoMock() *MockInventoryRepo {
 	return &MockInventoryRepo{}
 }
 
