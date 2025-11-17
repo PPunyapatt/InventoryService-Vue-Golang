@@ -1,4 +1,4 @@
-version: '3.9'
+# version: '3.9'
 
 services:
   postgres:
@@ -13,10 +13,41 @@ services:
       - 54321:5432
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - my_custom_network
+  
+  go-backend:
+    build: ./Backend-Golang
+    container_name: backend-golang
+    restart: unless-stopped
+    ports:
+      - 1234:1234
+    depends_on:
+      - postgres
+    environment:
+      - USERNAME_DB=pguser
+      - PASSWORD_DB=pgpassword
+      - PORT_DB=5432
+      - HOST_DB=postgres_db
+      - DATABASE_NAME=inventory_database
+      - ENV=docker
+    networks:
+      - my_custom_network
+
+  vue-app:
+    build: ./Frontend-Vue
+    container_name: frontend-vue
+    restart: unless-stopped
+    ports:
+      - 5173:80
+    depends_on:
+      - go-backend
+    networks:
+      - my_custom_network
 
 volumes:
   postgres_data:
 
 networks:
   my_custom_network:      
-    driver: inventory-nw
+     driver: bridge
