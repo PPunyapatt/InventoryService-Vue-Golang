@@ -20,7 +20,7 @@
       <v-col cols="1" style="margin-bottom: 20px;">
         <v-btn 
             color="primary" 
-            :disabled="state.disable_add"
+            :disabled="state.text.replace(/-/g, '').length != 16"
             block
             @click="addInventoryCode"
         >ADD</v-btn>
@@ -55,14 +55,9 @@
 
           
         </tr>
-
-        <tr v-if="state.loading">
-          <td colspan="4" class="text-center">
-            <v-progress-circular color="primary" indeterminate></v-progress-circular>
-          </td>
-        </tr>
       </tbody>
     </v-table>
+
     <v-pagination
       v-model="state.pagination.page"
       :length="state.pagination.pageTotal"
@@ -81,7 +76,7 @@
       </template>
 
       <template #next>
-        <v-btn icon @click="chevronChange('right')" :disabled="state.pagination.page === 20" rounded="circle">
+        <v-btn icon @click="chevronChange('right')" :disabled="state.pagination.page === state.pagination.pageTotal" rounded="circle">
           <v-icon>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
               <path d="M471.1 297.4C483.6 309.9 483.6 330.2 471.1 342.7L279.1 534.7C266.6 547.2 246.3 547.2 233.8 534.7C221.3 522.2 221.3 501.9 233.8 489.4L403.2 320L233.9 150.6C221.4 138.1 221.4 117.8 233.9 105.3C246.4 92.8 266.7 92.8 279.2 105.3L471.2 297.3z"/>
@@ -91,49 +86,37 @@
       </template>
     </v-pagination>
 
-    <v-snackbar
-      v-model="state.showSnackbarAlert"
-      :timeout="3000"
-      location="bottom  end"
-      :color="state.color"
-      elevation="2"
-      :multi-line="false"
-    >
-      {{ state.message }}
-    </v-snackbar>
-
     <Confirm 
-      :open="state.open_confirm" 
+      v-model:open="state.open_confirm" 
       :text="`ต้องการลบข้อมูลรหัสสินค้า ${formatName(state.selectCode)} หรือไม่ ?`" 
       @confirm="deleteInventoryCode"
     />
-     <v-overlay
-      :model-value="state.loading"
-      class="align-center justify-center"
-    >
-      <v-progress-circular
-        color="primary"
-        size="64"
-        indeterminate
-      ></v-progress-circular>
-    </v-overlay>
+     <Alert
+      v-model:show="state.alert"
+      title="Error"
+      :message="state.message"
+    />
+
+    <Loading
+      v-model:show="state.loading"
+    />
+
+    <SnackBar
+      v-model:show="state.snackAlert" 
+      :message="state.message"
+    />
   </div>
 </template>
 
-<script>
+<script setup>
 import { reactive, onMounted, ref , getCurrentInstance } from 'vue'
 import Barcode from '../components/Barcode.vue'
 import InventoryService from "../services/api-services"
 import Confirm from "../components/confirm.vue"
+import Loading from "../components/Loading.vue"
+import SnackBar from "../components/SnackBar.vue"
 
-export default {
-  components: { 
-    Barcode,
-    Confirm
-   },
-  setup() {
-
-    const state = reactive({ 
+const state = reactive({ 
       text: "",
       loading: false,
       disable_add: false,
@@ -148,21 +131,12 @@ export default {
       },
       showSnackbarAlert: false,
       message: '',
-      selectCode: ""
+      selectCode: "",
+      alert: true,
+      snackAlert: false
     })
-    const rowHeight = 56; // ความสูงประมาณของแต่ละ row
-    const tableHeight = window.innerHeight - 150; // ตามที่คุณตั้งค่า
-    const rowsPerPage = Math.ceil(tableHeight / rowHeight);
-
+  
     const tableWrapper = ref(null)
-
-    const formatCode = () => {
-      state.text = state.text.toUpperCase()
-      let cleaned = state.text.replace(/\W/g, '')
-      if (cleaned.length > 16) cleaned = cleaned.slice(0, 16)
-      const parts = cleaned.match(/.{1,4}/g)
-      state.text = parts ? parts.join('-') : ''
-    }
 
     const rules = [
       value => {
@@ -175,25 +149,15 @@ export default {
       }
     ]
 
-    const loadData = () => {
-      state.loading = true
-      InventoryService.getInventories(state.pagination.page, state.pagination.limit)
-        .then(response => {
-          console.log("response: ", response);
-          
-          state.pagination.total = response.data._pagination.total_count
-          state.inventories = response.data.data;
-          state.pagination.pageTotal =  Math.ceil(state.pagination.total / state.pagination.limit);
-        })
-        .catch(e => {
-          console.log(e);
-          state.color = 'red'
-          state.message = e.response.data.error_message
-        });
-      state.loading = false
+    function formatCode() {
+      state.text = state.text.toUpperCase()
+      let cleaned = state.text.replace(/\W/g, '')
+      if (cleaned.length > 16) cleaned = cleaned.slice(0, 16)
+      const parts = cleaned.match(/.{1,4}/g)
+      state.text = parts ? parts.join('-') : ''
     }
 
-    const formatName = (name) => {
+    function formatName(name) {
         if (name === '') {
           return name
         }
@@ -201,9 +165,32 @@ export default {
         return parts.join('-')
     }
 
+    async function loadData() {
+      state.loading = true
+        try {
+          var response = await InventoryService.getInventories(state.pagination.page, state.pagination.limit)
+          var data = response.data
+          state.inventories = data.data;
+          state.pagination.total = data._pagination.total_count
+          state.pagination.pageTotal =  Math.ceil(state.pagination.total / state.pagination.limit);
+          
+        } catch (e) {
+          if (e?.response?.data?.error_message != undefined) {
+              state.message = e.response.data.message
+          } else {
+              state.message = e.message
+          }
+          state.alert = true
+        } finally {
+          state.loading = false
+        }
+    }
+
     const deleteInventoryCode = async (val) => {
+      console.log("val: ", val);
+      
       if (val === 'cancel') return
-      state.open_confirm = false
+        
       state.loading = true
 
       var data = {
@@ -213,7 +200,6 @@ export default {
       try {
           const response = await InventoryService.deleteInventory(data)
           state.message = response.data.message
-          state.color = 'success'
           state.pagination.total--
           state.pagination.pageTotal =  Math.ceil(state.pagination.total / state.pagination.limit);
 
@@ -226,16 +212,19 @@ export default {
           if (state.inventories.length < state.pagination.limit) {
             await loadData()
           }
+
+          state.snackAlert = true
       } catch (e) {
-          state.color = 'red'
-          state.message = e.response.data.error_message
+          if (e?.response?.data?.error_message != undefined) {
+              state.message = e.response.data.message
+          } else {
+              state.message = e.message
+          }
+          state.alert = true
       } finally {
-        state.showSnackbarAlert = true
         state.loading = false
       }
-
-      
-    }   
+    }
 
     const addInventoryCode = async () => {
       state.loading = true
@@ -247,23 +236,27 @@ export default {
       try {
           const response = await InventoryService.addInventory(data)
           state.message = response.data.message
-          state.color = 'success'
           state.pagination.total++
           state.pagination.pageTotal =  Math.ceil(state.pagination.total / state.pagination.limit);
+          state.snackAlert = true
+
+          if (state.inventories.length < state.pagination.limit &&  state.pagination.pageTotal === state.pagination.page) {
+              await loadData()
+          }
       } catch (e) {
-          state.color = 'red'
-          state.message = e.response.data.message
+          if (e?.response?.data?.error_message != undefined) {
+              state.message = e.response.data.message
+          } else {
+              state.message = e.message
+          }
+          state.alert = true
       } finally {
-        state.showSnackbarAlert = true
         state.text = ""
-        state.disable_add = true
         state.loading = false
       }
       
        
-      if (state.inventories.length > state.pagination.limit &&  state.pagination.pageTotal === state.pagination.page) {
-        await loadData()
-      }
+      
     }
 
     const confirmDelete = (inventoryCode) => {
@@ -281,34 +274,15 @@ export default {
     const chevronChange = async (val) => {
       if (val === "left" && state.pagination.page > 1) {
         state.pagination.page--
-      } else if (val === "right" && state.pagination.page < state.pagination.total) {
+      } else if (val === "right" && state.pagination.page < state.pagination.pageTotal) {
         state.pagination.page++
       }
-      console.log("page: ", state.pagination.page);
       await loadData()
     }
 
-
-
     onMounted(async () => {
         await loadData(state.pagination.limit)
-      })
-
-    return { 
-      state,
-      rules, 
-      tableWrapper,
-      formatCode, 
-      formatName,
-      loadData,
-      deleteInventoryCode,
-      addInventoryCode,
-      confirmDelete,
-      pageChange,
-      chevronChange
-    }
-  }
-}
+    })
 </script>
 
 <style>
