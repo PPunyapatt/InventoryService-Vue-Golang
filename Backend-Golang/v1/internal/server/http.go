@@ -7,12 +7,15 @@ import (
 
 	"github.com/PPunyapatt/InventoryService-Vue-Golang/v1/internal/api"
 	"github.com/PPunyapatt/InventoryService-Vue-Golang/v1/internal/api/handler"
+	"github.com/PPunyapatt/InventoryService-Vue-Golang/v1/internal/middleware"
+	redisrate "github.com/go-redis/redis_rate/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/redis/go-redis/v9"
 )
 
-func MapRoutes(ctx context.Context, handler *handler.ApiHandler) {
+func MapRoutes(ctx context.Context, handler *handler.ApiHandler, rdb *redis.Client) {
 	app := fiber.New()
 	errCh := make(chan error, 1)
 	c := cors.New(cors.Config{
@@ -24,6 +27,7 @@ func MapRoutes(ctx context.Context, handler *handler.ApiHandler) {
 	// Add logger middleware
 	app.Use(c)
 	app.Use(logger.New())
+	app.Use(middleware.NewRateLimitMiddleware(redisrate.NewLimiter(rdb)).Handler())
 
 	// routes
 	api.Route(app, handler)

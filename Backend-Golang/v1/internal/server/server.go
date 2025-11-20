@@ -10,6 +10,7 @@ import (
 	"github.com/PPunyapatt/InventoryService-Vue-Golang/v1/internal/api/handler"
 	"github.com/PPunyapatt/InventoryService-Vue-Golang/v1/internal/pkg/config"
 	"github.com/PPunyapatt/InventoryService-Vue-Golang/v1/internal/pkg/database"
+	"github.com/PPunyapatt/InventoryService-Vue-Golang/v1/internal/pkg/redis"
 	"github.com/PPunyapatt/InventoryService-Vue-Golang/v1/internal/repository"
 	"github.com/PPunyapatt/InventoryService-Vue-Golang/v1/internal/service"
 )
@@ -33,13 +34,20 @@ func Run() error {
 		return err
 	}
 	defer db.Sqlx.Close()
+
+	rdb, err := redis.InitRedis(cfg)
+	if err != nil {
+		return err
+	}
+	defer rdb.Close()
+
 	repository := repository.NewInventoryRepository(db.Sqlx)
 
 	service := service.NewInventoryService(repository)
 
 	handler := handler.ServiceNew(service)
 
-	MapRoutes(ctx, handler)
+	MapRoutes(ctx, handler, rdb)
 
 	return nil
 }
